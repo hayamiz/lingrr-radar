@@ -6,6 +6,11 @@ require 'json'
 
 
 module Lingr
+  module Event
+    MESSAGE = :message
+    PRESENCE = :presence
+  end
+
   class Lingr
     def initialize(username, password)
       @username = username
@@ -33,16 +38,20 @@ module Lingr
       if @counter
         res = @session.get("/event/observe",
                           {:counter => @counter})
-        @counter = res["counter"] if res && res["counter"]
-        if res["events"]
-          res["events"].each do |event|
-            handlers = if event["message"]
-                         @handlers["message"]
-                       elsif event["presence"]
-                         @handlers["presence"]
-                       end
-            handlers.each do |handler|
-              handler.call(event)
+        if res
+        @counter = res["counter"] if res["counter"]
+          if res["events"]
+            res["events"].each do |event|
+              handlers = if event["message"]
+                           @handlers[Event::MESSAGE]
+                         elsif event["presence"]
+                           @handlers[Event::PRESENCE]
+                         end
+              puts "handlers: "
+              
+              handlers.each do |handler|
+                handler.call(event)
+              end if handlers
             end
           end
         end
@@ -59,8 +68,6 @@ module Lingr
         @handlers[event_name] = handlers
       end
       handlers << handler
-      p handler
-      p @handlers
     end
   end
 
