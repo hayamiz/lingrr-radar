@@ -12,19 +12,33 @@ end
 
 def main(argv)
   lingr = Lingr::Lingr.new(readuser(), readpasswd())
+  lingr.on(Lingr::Event::MESSAGE) do |message|
+    notify_send(message["message"]["nickname"],
+                message["message"]["text"])
+  end
+
+  reconnect = false
+
   while true
-    lingr.rooms().each do |room|
-      lingr.subscribe(room)
-    end
-    
-    lingr.on("message") do |message|
-      notify_send(message["message"]["nickname"],
-                  message["message"]["text"])
+    if reconnect
+      lingr.connect()
+      reconnect = false
     end
 
-    while true
-      res = lingr.observe()
-      p res
+    begin
+      lingr.rooms().each do |room|
+        lingr.subscribe(room)
+      end
+      
+      while true
+        res = lingr.observe()
+        p res
+      end
+    rescue SocketError => err
+      $stderr.puts "SocketError : sleeps"
+      $stderr.puts err.backtrace
+      sleep(10)
+      reconnect = true
     end
   end
 end
